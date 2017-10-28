@@ -242,6 +242,12 @@ public class MainActivity extends AppCompatActivity {
                 public void onConnectionStateChange(BluetoothGatt gatt, int status, int newState) {
                     if (newState == BluetoothProfile.STATE_CONNECTED) {
                         Log.d(TAG, "Connected to GATT server.");
+                        runOnUiThread(new Runnable() {
+                            @Override
+                            public void run() {
+                                mBluetoothGatt.discoverServices();
+                            }
+                        });
                     } else if (newState == STATE_DISCONNECTED) {
                         Log.d(TAG, "Disconnected from GATT server.");
                         mCharacteristic = null;
@@ -250,7 +256,6 @@ public class MainActivity extends AppCompatActivity {
                 }
 
                 @Override
-                // New services discovered
                 public void onServicesDiscovered(BluetoothGatt gatt, int status) {
                     if (status == BluetoothGatt.GATT_SUCCESS) {
                         for (BluetoothGattService service : gatt.getServices()) {
@@ -322,7 +327,7 @@ public class MainActivity extends AppCompatActivity {
                         public void run() {
                             if (device.getName() != null && device.getName().equalsIgnoreCase(DEVICE_NAME)) {
                                 hideStatus();
-                                Log.d(TAG, "Connected to: " + DEVICE_NAME);
+                                Log.d(TAG, "Connecting to: " + DEVICE_NAME);
                                 stopScan();
                                 mBluetoothGatt = device.connectGatt(MainActivity.this, false, mGattCallback);
                             } else {
