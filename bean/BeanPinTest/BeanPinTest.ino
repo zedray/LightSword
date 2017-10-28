@@ -1,9 +1,7 @@
 #include <Servo.h>
 
 // Reads from Bluetooth.
-#define SCRATCH_RED 1
-#define SCRATCH_GREEN 2
-#define SCRATCH_BLUE 3
+#define SCRATCH 1
 
 // Sends 2.6v 18mA into Digital Pin 0
 #define PIN_BLUE 1
@@ -20,9 +18,7 @@ void setup() {
     pinMode(PIN_BLUE, OUTPUT);
 
     // Initialize Bluetooth.
-    Bean.setScratchNumber(SCRATCH_RED, POWER_MIN);
-    Bean.setScratchNumber(SCRATCH_GREEN, POWER_MIN);
-    Bean.setScratchNumber(SCRATCH_BLUE, POWER_MIN);
+    Bean.setScratchNumber(SCRATCH, POWER_MIN);
 
     // Show a boot animation.
     handleCommandSetLEDs(0, 255, 255);
@@ -32,9 +28,10 @@ void setup() {
 }
 
 void loop() {
-    uint16_t red = Bean.readScratchNumber(2);
-    uint16_t green = Bean.readScratchNumber(1);
-    uint16_t blue = Bean.readScratchNumber(2);
+    uint32_t value = Bean.readScratchNumber(SCRATCH);
+    uint8_t red = (uint8_t) value;
+    uint8_t green =  (uint8_t) (value >>= 8);
+    uint8_t blue =  (uint8_t) (value >>= 8);
     analogWrite(PIN_RED, red);
     analogWrite(PIN_GREEN, green);
     analogWrite(PIN_BLUE, blue);
