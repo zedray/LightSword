@@ -14,11 +14,13 @@ import android.graphics.Color;
 import android.os.Bundle;
 import android.os.Handler;
 import android.support.annotation.NonNull;
+import android.support.annotation.StringRes;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
 import android.view.View;
+import android.widget.ProgressBar;
 import android.widget.SeekBar;
 import android.widget.TextView;
 
@@ -51,6 +53,7 @@ public class MainActivity extends AppCompatActivity {
     private Handler mHandler = new Handler();
 
     private View mLoading;
+    private ProgressBar mProgressBar;
     private TextView mStatusTextView;
     private View mPreview;
     private SeekBar mRedSeekBar;
@@ -69,12 +72,15 @@ public class MainActivity extends AppCompatActivity {
         mLoading = findViewById(R.id.loading);
         mLoading.setOnClickListener(new View.OnClickListener() {
             @Override
-            public void onClick(View view) {
-                if (!mScanning) {
+            public void onClick(@NonNull final View view) {
+                if (mBluetoothAdapter == null) {
+                    checkLocationPermission();
+                } else if (!mScanning) {
                     startDeviceScan();
                 }
             }
         });
+        mProgressBar = (ProgressBar) findViewById(R.id.progressBar);
         mStatusTextView = (TextView) findViewById(R.id.textView_status);
         mPreview = findViewById(R.id.preview);
         mRedSeekBar = (SeekBar) findViewById(R.id.seekBar_red);
@@ -86,82 +92,7 @@ public class MainActivity extends AppCompatActivity {
         mRedSeekBar.setOnSeekBarChangeListener(mSeekBarChangeListener);
         mGreenSeekBar.setOnSeekBarChangeListener(mSeekBarChangeListener);
         mBlueSeekBar.setOnSeekBarChangeListener(mSeekBarChangeListener);
-        update();
         checkLocationPermission();
-    }
-
-    @Override
-    public void onRequestPermissionsResult(int requestCode, @NonNull String permissions[],
-                                           @NonNull int[] grantResults) {
-        switch (requestCode) {
-            case PERMISSION_REQUEST_COARSE_LOCATION: {
-                if (grantResults[0] == PERMISSION_GRANTED) {
-                    checkLocationSetting();
-                } else {
-                    setStatus(getString(R.string.error_location_permission_not_enabled), true);
-                }
-            }
-        }
-    }
-
-    private void checkLocationPermission() {
-        setStatus(getString(R.string.checking_location_permission), true);
-        if (ContextCompat.checkSelfPermission(this, ACCESS_FINE_LOCATION) == PERMISSION_GRANTED) {
-            checkLocationSetting();
-        } else {
-            ActivityCompat.requestPermissions(this, new String[]{ACCESS_FINE_LOCATION},
-                    PERMISSION_REQUEST_COARSE_LOCATION);
-        }
-    }
-
-    private void checkLocationSetting() {
-        setStatus(getString(R.string.checking_location_setting), true);
-        LocationServices.getSettingsClient(this)
-                .checkLocationSettings(new LocationSettingsRequest.Builder().build())
-                .addOnCompleteListener(new OnCompleteListener<LocationSettingsResponse>() {
-                    @Override
-                    public void onComplete(@NonNull final Task<LocationSettingsResponse> task) {
-                        try {
-                            LocationSettingsResponse response = task.getResult(ApiException.class);
-                            if (response.getLocationSettingsStates().isLocationUsable()) {
-                                startBluetooth();
-                            } else {
-                                setStatus(getString(R.string.error_location_setting_not_enabled), true);
-                            }
-                        } catch (ApiException exception) {
-                            setStatus(getString(R.string.error_location_other)
-                                    + exception.getLocalizedMessage(), true);
-                        }
-                    }
-                });
-    }
-
-    private void startBluetooth() {
-        setStatus(getString(R.string.starting_bluetooth), true);
-        mBluetoothAdapter = ((BluetoothManager) getSystemService(Context.BLUETOOTH_SERVICE))
-                .getAdapter();
-        if (mBluetoothAdapter == null || !mBluetoothAdapter.isEnabled()) {
-            startActivityForResult(new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE),
-                    REQUEST_ENABLE_BT);
-            setStatus(getString(R.string.error_bluetooth_not_enabled), true);
-        } else {
-            startDeviceScan();
-        }
-    }
-
-    private void update() {
-        mPreview.setBackgroundColor(Color.rgb(mRedSeekBar.getProgress(), mGreenSeekBar.getProgress(), mBlueSeekBar.getProgress()));
-        mRedTextView.setText("Red : " + mRedSeekBar.getProgress());
-        mGreenTextView.setText("Green : " + mGreenSeekBar.getProgress());
-        mBlueTextView.setText("Blue : " + mBlueSeekBar.getProgress());
-
-        if (mCharacteristic != null) {
-            Log.w(TAG, "set R " + mRedSeekBar.getProgress() + " G " + mGreenSeekBar.getProgress() + " B " + mBlueSeekBar.getProgress());
-            mCharacteristic.setValue(intToByteArray(mRedSeekBar.getProgress(), mGreenSeekBar.getProgress(), mBlueSeekBar.getProgress()));
-            mBluetoothGatt.writeCharacteristic(mCharacteristic);
-        } else {
-            Log.w(TAG, "NOT CONNECTED");
-        }
     }
 
     @Override
@@ -174,14 +105,92 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
+    @Override
+    public void onRequestPermissionsResult(int requestCode, @NonNull String permissions[],
+                                           @NonNull int[] grantResults) {
+        switch (requestCode) {
+            case PERMISSION_REQUEST_COARSE_LOCATION: {
+                if (grantResults[0] == PERMISSION_GRANTED) {
+                    checkLocationSetting();
+                } else {
+                    setError(getString(R.string.error_location_permission_not_enabled));
+                }
+            }
+        }
+    }
+
+    private void checkLocationPermission() {
+        setStatus(getString(R.string.checking_location_permission));
+        if (ContextCompat.checkSelfPermission(this, ACCESS_FINE_LOCATION) == PERMISSION_GRANTED) {
+            checkLocationSetting();
+        } else {
+            ActivityCompat.requestPermissions(this, new String[]{ACCESS_FINE_LOCATION},
+                    PERMISSION_REQUEST_COARSE_LOCATION);
+        }
+    }
+
+    private void checkLocationSetting() {
+        setStatus(getString(R.string.checking_location_setting));
+        LocationServices.getSettingsClient(this)
+                .checkLocationSettings(new LocationSettingsRequest.Builder().build())
+                .addOnCompleteListener(new OnCompleteListener<LocationSettingsResponse>() {
+                    @Override
+                    public void onComplete(@NonNull final Task<LocationSettingsResponse> task) {
+                        try {
+                            LocationSettingsResponse response = task.getResult(ApiException.class);
+                            if (response.getLocationSettingsStates().isLocationUsable()) {
+                                startBluetooth();
+                            } else {
+                                setError(getString(R.string.error_location_setting_not_enabled));
+                            }
+                        } catch (ApiException exception) {
+                            setError(getString(R.string.error_location_other)
+                                    + exception.getLocalizedMessage());
+                        }
+                    }
+                });
+    }
+
+    private void startBluetooth() {
+        setStatus(getString(R.string.starting_bluetooth));
+        mBluetoothAdapter = ((BluetoothManager) getSystemService(Context.BLUETOOTH_SERVICE))
+                .getAdapter();
+        if (mBluetoothAdapter == null || !mBluetoothAdapter.isEnabled()) {
+            startActivityForResult(new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE),
+                    REQUEST_ENABLE_BT);
+            setError(getString(R.string.error_bluetooth_not_enabled));
+        } else {
+            startDeviceScan();
+        }
+    }
+
+    private void update() {
+        mPreview.setBackgroundColor(Color.rgb(mRedSeekBar.getProgress(), mGreenSeekBar.getProgress(), mBlueSeekBar.getProgress()));
+        setTextString(mRedTextView, R.string.red, mRedSeekBar);
+        setTextString(mGreenTextView, R.string.green, mGreenSeekBar);
+        setTextString(mBlueTextView, R.string.blue, mBlueSeekBar);
+        if (mCharacteristic != null) {
+            Log.v(TAG, "R " + mRedSeekBar.getProgress() + " G " + mGreenSeekBar.getProgress() + " B " + mBlueSeekBar.getProgress());
+            mCharacteristic.setValue(intToByteArray(mRedSeekBar.getProgress(), mGreenSeekBar.getProgress(), mBlueSeekBar.getProgress()));
+            mBluetoothGatt.writeCharacteristic(mCharacteristic);
+        } else {
+            Log.w(TAG, "Not connected");
+        }
+    }
+
+    private void setTextString(@NonNull final TextView textView, @StringRes int labelRes,
+                               @NonNull final SeekBar seekBar) {
+        textView.setText(getString(labelRes, (seekBar.getProgress() + 1) * 100 / 256));
+    }
+
     private void startDeviceScan() {
-        setStatus(getString(R.string.scanning_for_devices), true);
+        setStatus(getString(R.string.scanning_for_devices));
         mHandler.postDelayed(new Runnable() {
             @Override
             public void run() {
                 if (mScanning) {
                     stopScan();
-                    setStatus(getString(R.string.scanning_for_devices), true);
+                    setError(getString(R.string.error_could_not_find_device));
                 }
             }
         }, SCAN_PERIOD);
@@ -204,9 +213,22 @@ public class MainActivity extends AppCompatActivity {
                 (byte) (0)};
     }
 
-    private void setStatus(@NonNull final String statusText, final boolean isVisible) {
-        mLoading.setVisibility(isVisible ? View.VISIBLE : View.GONE);
+    private void setStatus(@NonNull final String statusText) {
+        mLoading.setVisibility(View.VISIBLE);
+        mProgressBar.setVisibility(View.VISIBLE);
+        mProgressBar.setIndeterminate(true);
         mStatusTextView.setText(statusText);
+    }
+
+    private void hideStatus() {
+        mLoading.setVisibility( View.GONE);
+        update();
+    }
+
+    private void setError(@NonNull final String errorText) {
+        mLoading.setVisibility(View.VISIBLE);
+        mProgressBar.setVisibility(View.INVISIBLE);
+        mStatusTextView.setText(errorText);
     }
 
     private final BluetoothGattCallback mGattCallback = new BluetoothGattCallback() {
@@ -294,7 +316,7 @@ public class MainActivity extends AppCompatActivity {
                         @Override
                         public void run() {
                             if (device.getName() != null && device.getName().equalsIgnoreCase(DEVICE_NAME)) {
-                                setStatus(getString(R.string.connected_to_device), true);
+                                hideStatus();
                                 Log.d(TAG, "Connected to: " + DEVICE_NAME);
                                 stopScan();
                                 mBluetoothGatt = device.connectGatt(MainActivity.this, false, mGattCallback);

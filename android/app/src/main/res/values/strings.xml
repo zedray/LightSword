@@ -4,14 +4,16 @@
 
     <string name="checking_location_permission">Checking if Location permission is granted</string>
     <string name="checking_location_setting">Checking if Location setting is enabled</string>
-    <string name="error_location_setting_not_enabled">Error: Location setting not enabled</string>
-    <string name="error_location_permission_not_enabled">Error: Location permission not granted</string>
-    <string name="error_location_other">Error: Location setting </string>
+    <string name="error_location_setting_not_enabled">Sorry, location setting not enabled</string>
+    <string name="error_location_permission_not_enabled">Sorry, location permission is not granted</string>
+    <string name="error_location_other">Sorry, location setting error: </string>
     <string name="starting_bluetooth">Starting Bluetooth</string>
-    <string name="error_bluetooth_not_enabled">Error: Bluetooth not enabled</string>
+    <string name="error_bluetooth_not_enabled">Sorry, Bluetooth not enabled</string>
     <string name="scanning_for_devices">Looking for your Sword</string>
-    <string name="error_could_not_find_device">Error: couldn\'t find your Sword</string>
-    <string name="connected_to_device">Connected to your Sword</string>
+    <string name="error_could_not_find_device">Sorry, I couldn\'t find your Sword</string>
+    <string name="red">%1$d Red</string>
+    <string name="green">%1$d Green</string>
+    <string name="blue">%1$d Blue</string>
 
     <string name="reconnect">Reconnect</string>
 </resources>
