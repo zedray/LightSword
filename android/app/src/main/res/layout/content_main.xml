@@ -12,14 +12,6 @@
         android:layout_height="match_parent"
         android:orientation="vertical">
 
-        <Button
-            android:id="@+id/button_reconnect"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            style="@style/Base.TextAppearance.AppCompat.Large"
-            android:gravity="center"
-            android:text="@string/reconnect" />
-
         <View
             android:id="@+id/preview"
             android:layout_width="match_parent"
@@ -28,9 +20,9 @@
 
         <TextView
             android:id="@+id/textView_red"
+            style="@style/Base.TextAppearance.AppCompat.Large"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            style="@style/Base.TextAppearance.AppCompat.Large"
             android:gravity="center"
             android:paddingTop="5dp" />
 
@@ -40,14 +32,17 @@
             android:layout_height="0dp"
             android:layout_weight="1"
             android:max="255"
-            android:progress="255" />
+            android:progress="255"
+            android:progressBackgroundTint="@color/red"
+            android:progressTint="@color/red"
+            android:thumbTint="@color/red" />
 
         <TextView
             android:id="@+id/textView_green"
+            style="@style/Base.TextAppearance.AppCompat.Large"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:gravity="center"
-            style="@style/Base.TextAppearance.AppCompat.Large"
             android:paddingTop="5dp" />
 
         <SeekBar
@@ -56,13 +51,16 @@
             android:layout_height="0dp"
             android:layout_weight="1"
             android:max="255"
-            android:progress="255" />
+            android:progress="255"
+            android:progressBackgroundTint="@color/green"
+            android:progressTint="@color/green"
+            android:thumbTint="@color/green" />
 
         <TextView
             android:id="@+id/textView_blue"
+            style="@style/Base.TextAppearance.AppCompat.Large"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            style="@style/Base.TextAppearance.AppCompat.Large"
             android:gravity="center"
             android:paddingTop="5dp" />
 
@@ -70,9 +68,13 @@
             android:id="@+id/seekBar_blue"
             android:layout_width="match_parent"
             android:layout_height="0dp"
+            android:layout_margin="10dp"
             android:layout_weight="1"
             android:max="255"
-            android:progress="255" />
+            android:progress="255"
+            android:progressBackgroundTint="@color/blue"
+            android:progressTint="@color/blue"
+            android:thumbTint="@color/blue" />
 
     </LinearLayout>
 
@@ -81,7 +83,8 @@
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:background="@color/common_google_signin_btn_text_dark_default"
-        android:orientation="vertical">
+        android:orientation="vertical"
+        android:visibility="gone">
 
         <ProgressBar
             android:id="@+id/progressBar"

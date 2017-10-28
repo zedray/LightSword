@@ -165,16 +165,17 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void update() {
-        mPreview.setBackgroundColor(Color.rgb(mRedSeekBar.getProgress(), mGreenSeekBar.getProgress(), mBlueSeekBar.getProgress()));
+        mPreview.setBackgroundColor(Color.rgb(mRedSeekBar.getProgress(),
+                mGreenSeekBar.getProgress(), mBlueSeekBar.getProgress()));
         setTextString(mRedTextView, R.string.red, mRedSeekBar);
         setTextString(mGreenTextView, R.string.green, mGreenSeekBar);
         setTextString(mBlueTextView, R.string.blue, mBlueSeekBar);
         if (mCharacteristic != null) {
-            Log.v(TAG, "R " + mRedSeekBar.getProgress() + " G " + mGreenSeekBar.getProgress() + " B " + mBlueSeekBar.getProgress());
-            mCharacteristic.setValue(intToByteArray(mRedSeekBar.getProgress(), mGreenSeekBar.getProgress(), mBlueSeekBar.getProgress()));
+            mCharacteristic.setValue(intToByteArray(mRedSeekBar.getProgress(),
+                    mGreenSeekBar.getProgress(), mBlueSeekBar.getProgress()));
             mBluetoothGatt.writeCharacteristic(mCharacteristic);
         } else {
-            Log.w(TAG, "Not connected");
+            Log.v(TAG, "Not connected");
         }
     }
 
@@ -214,10 +215,15 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void setStatus(@NonNull final String statusText) {
-        mLoading.setVisibility(View.VISIBLE);
-        mProgressBar.setVisibility(View.VISIBLE);
-        mProgressBar.setIndeterminate(true);
-        mStatusTextView.setText(statusText);
+        runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                mLoading.setVisibility(View.VISIBLE);
+                mProgressBar.setVisibility(View.VISIBLE);
+                mProgressBar.setIndeterminate(true);
+                mStatusTextView.setText(statusText);
+            }
+        });
     }
 
     private void hideStatus() {
@@ -236,11 +242,10 @@ public class MainActivity extends AppCompatActivity {
                 public void onConnectionStateChange(BluetoothGatt gatt, int status, int newState) {
                     if (newState == BluetoothProfile.STATE_CONNECTED) {
                         Log.d(TAG, "Connected to GATT server.");
-                        Log.d(TAG, "Attempting to start service discovery:" +
-                                mBluetoothGatt.discoverServices());
-
                     } else if (newState == STATE_DISCONNECTED) {
                         Log.d(TAG, "Disconnected from GATT server.");
+                        mCharacteristic = null;
+                        startDeviceScan();
                     }
                 }
 
@@ -266,6 +271,7 @@ public class MainActivity extends AppCompatActivity {
                         Log.d(TAG, "service: " + service.getUuid());
                         mCharacteristic = service.getCharacteristic(UUID.fromString(SCRATCH));
                         Log.d(TAG, "mCharacteristic: " + mCharacteristic.getUuid());
+                        update();
                     } else {
                         Log.d(TAG, "onServicesDiscovered received: " + status);
                     }
@@ -287,7 +293,6 @@ public class MainActivity extends AppCompatActivity {
                         Log.d("onCharacteristicWrite", "Failed write, retrying");
                         gatt.writeCharacteristic(characteristic);
                     }
-                    Log.d(TAG, "onCharacteristicWrite characteristic: " + characteristic.getUuid() + " " + status);
                 }
             };
 
