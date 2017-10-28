@@ -1,5 +1,6 @@
 package com.zedray.lightsword;
 
+import android.Manifest;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothGatt;
@@ -14,9 +15,10 @@ import android.content.pm.PackageManager;
 import android.graphics.Color;
 import android.os.Bundle;
 import android.os.Handler;
+import android.support.v4.app.ActivityCompat;
+import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
-import android.view.MotionEvent;
 import android.view.View;
 import android.widget.SeekBar;
 import android.widget.TextView;
@@ -30,18 +32,13 @@ import static android.bluetooth.BluetoothProfile.STATE_DISCONNECTED;
 
 public class MainActivity extends AppCompatActivity {
 
-    private final static String TAG = "Pebble";
-    private final static String DEVICE_NAME = "keg";
-    private final static String DEVICE_ADDRESS = "D0:39:72:C9:1E:15";
+    private final static String TAG = "LightSword";
+    private final static String DEVICE_NAME = "LightBean";
 
     private final static String SERVICE = "a495ff20-c5b1-4b44-b512-1370f02d74de";
     private final static String SCRATCH1 = "a495ff21-c5b1-4b44-b512-1370f02d74de";
     private final static String SCRATCH2 = "a495ff22-c5b1-4b44-b512-1370f02d74de";
     private final static String SCRATCH3 = "a495ff23-c5b1-4b44-b512-1370f02d74de";
-
-    private final static byte[] ROTATE_FORWARDS = hexStringToByteArray("00");
-    private final static byte[] ROTATE_STOP = hexStringToByteArray("5a");
-    private final static byte[] ROTATE_BACKWARDS = hexStringToByteArray("b4");
 
     private final static int REQUEST_ENABLE_BT = 1;
 
@@ -51,6 +48,7 @@ public class MainActivity extends AppCompatActivity {
     private BluetoothGattCharacteristic mGreenCharacteristic;
     private BluetoothGattCharacteristic mBlueCharacteristic;
 
+    private TextView mStatusTextView;
     private View mPreview;
     private SeekBar mRedSeekBar;
     private SeekBar mGreenSeekBar;
@@ -63,12 +61,44 @@ public class MainActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+        mStatusTextView = (TextView) findViewById(R.id.textView_status);
+        mPreview = findViewById(R.id.preview);
+        mRedSeekBar = (SeekBar) findViewById(R.id.seekBar_red);
+        mGreenSeekBar = (SeekBar) findViewById(R.id.seekBar_green);
+        mBlueSeekBar = (SeekBar) findViewById(R.id.seekBar_blue);
+        mRedTextView = (TextView) findViewById(R.id.textView_red);
+        mGreenTextView = (TextView) findViewById(R.id.textView_green);
+        mBlueTextView = (TextView) findViewById(R.id.textView_blue);
+        mRedSeekBar.setOnSeekBarChangeListener(mSeekBarChangeListener);
+        mGreenSeekBar.setOnSeekBarChangeListener(mSeekBarChangeListener);
+        mBlueSeekBar.setOnSeekBarChangeListener(mSeekBarChangeListener);
+
 
         // Use this check to determine whether BLE is supported on the device. Then
         // you can selectively disable BLE-related features.
-        if (!getPackageManager().hasSystemFeature(PackageManager.FEATURE_BLUETOOTH_LE)) {
+        if (!hasBlePermissions() ||
+                !getPackageManager().hasSystemFeature(PackageManager.FEATURE_BLUETOOTH_LE)) {
             Toast.makeText(this, "ble_not_supported", Toast.LENGTH_SHORT).show();
             finish();
+        }
+
+        int permissionCheck = ContextCompat.checkSelfPermission(this, android.Manifest.permission.ACCESS_FINE_LOCATION);
+        if (permissionCheck != PackageManager.PERMISSION_GRANTED) {
+            ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.ACCESS_FINE_LOCATION}, 0);
+        } else {
+            if(hasBlePermissions()) {
+                mHandler = new Handler();
+
+                if (!getPackageManager().hasSystemFeature(PackageManager.FEATURE_BLUETOOTH_LE)) {
+                    Toast.makeText(this, "ble_not_supported", Toast.LENGTH_SHORT).show();
+                    finish();
+                }
+
+                final BluetoothManager bluetoothManager = (BluetoothManager) getSystemService(Context.BLUETOOTH_SERVICE);
+                mBluetoothAdapter = bluetoothManager.getAdapter();
+
+                scanLeDevice(true);
+            }
         }
 
         // Initializes Bluetooth adapter.
@@ -85,30 +115,7 @@ public class MainActivity extends AppCompatActivity {
         }
 
         scanLeDevice(true);
-
-        mPreview = findViewById(R.id.preview);
-        mRedSeekBar = (SeekBar) findViewById(R.id.seekBar_red);
-        mGreenSeekBar = (SeekBar) findViewById(R.id.seekBar_green);
-        mBlueSeekBar = (SeekBar) findViewById(R.id.seekBar_blue);
-        mRedTextView = (TextView) findViewById(R.id.textView_red);
-        mGreenTextView = (TextView) findViewById(R.id.textView_green);
-        mBlueTextView = (TextView) findViewById(R.id.textView_blue);
-        mRedSeekBar.setOnSeekBarChangeListener(mSeekBarChangeListener);
-        mGreenSeekBar.setOnSeekBarChangeListener(mSeekBarChangeListener);
-        mBlueSeekBar.setOnSeekBarChangeListener(mSeekBarChangeListener);
-
         update();
-    }
-
-    public static byte[] hexStringToByteArray(String s) {
-        int len = s.length();
-        byte[] data = new byte[len / 2];
-
-        for (int i = 0; i < len; i += 2) {
-            data[i / 2] = (byte) ((Character.digit(s.charAt(i), 16) << 4) + Character.digit(s.charAt(i + 1), 16));
-        }
-
-        return data;
     }
 
     public static byte[] intToByteArray(int value) {
@@ -132,21 +139,41 @@ public class MainActivity extends AppCompatActivity {
         }
     };
 
+    public boolean hasBlePermissions() {
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION)
+                != PackageManager.PERMISSION_GRANTED ||
+                ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION)
+                        != PackageManager.PERMISSION_GRANTED) {
+            return false;
+        } else {
+            return true;
+        }
+    }
+
     private void update() {
-        Log.w(TAG, "set R " + mRedSeekBar.getProgress() + " G " + mGreenSeekBar.getProgress() + " B " + mBlueSeekBar.getProgress());
+        if (mScanning) {
+            mStatusTextView.setText("Scanning");
+        } else if (mRedCharacteristic != null) {
+            mStatusTextView.setText("Connected to ");
+        } else {
+            mStatusTextView.setText("No device found");
+        }
         mPreview.setBackgroundColor(Color.rgb(mRedSeekBar.getProgress(), mGreenSeekBar.getProgress(), mBlueSeekBar.getProgress()));
         mRedTextView.setText("Red : " + mRedSeekBar.getProgress());
         mGreenTextView.setText("Green : " + mGreenSeekBar.getProgress());
         mBlueTextView.setText("Blue : " + mBlueSeekBar.getProgress());
 
-        /*
-        mRedCharacteristic.setValue(intToByteArray(mRedSeekBar.getProgress()));
-        mGreenCharacteristic.setValue(intToByteArray(mGreenSeekBar.getProgress()));
-        mBlueCharacteristic.setValue(intToByteArray(mBlueSeekBar.getProgress()));
-        mBluetoothGatt.writeCharacteristic(mRedCharacteristic);
-        mBluetoothGatt.writeCharacteristic(mGreenCharacteristic);
-        mBluetoothGatt.writeCharacteristic(mBlueCharacteristic);
-        */
+        if (mRedCharacteristic != null) {
+            Log.w(TAG, "set R " + mRedSeekBar.getProgress() + " G " + mGreenSeekBar.getProgress() + " B " + mBlueSeekBar.getProgress());
+            mRedCharacteristic.setValue(intToByteArray(mRedSeekBar.getProgress()));
+            mGreenCharacteristic.setValue(intToByteArray(mGreenSeekBar.getProgress()));
+            mBlueCharacteristic.setValue(intToByteArray(mBlueSeekBar.getProgress()));
+            mBluetoothGatt.writeCharacteristic(mRedCharacteristic);
+            mBluetoothGatt.writeCharacteristic(mGreenCharacteristic);
+            mBluetoothGatt.writeCharacteristic(mBlueCharacteristic);
+        } else {
+            Log.w(TAG, "NOT CONNECTED set R " + mRedSeekBar.getProgress() + " G " + mGreenSeekBar.getProgress() + " B " + mBlueSeekBar.getProgress());
+        }
     }
 
     @Override
@@ -171,7 +198,7 @@ public class MainActivity extends AppCompatActivity {
                     runOnUiThread(new Runnable() {
                         @Override
                         public void run() {
-                            Log.w(TAG, "device: " + device.getName() + " " + device.getAddress());
+                            Log.w(TAG, "Device: " + device.getName() + " " + device.getAddress());
 
                             if (device.getName() != null && device.getName().equalsIgnoreCase(DEVICE_NAME)) {
 
@@ -189,6 +216,7 @@ public class MainActivity extends AppCompatActivity {
     int mConnectionState;
 
     private void connectToDevice(BluetoothDevice device) {
+        Log.i(TAG, "connectToDevice.");
         mBluetoothGatt = device.connectGatt(this, false, mGattCallback);
     }
 
@@ -215,11 +243,11 @@ public class MainActivity extends AppCompatActivity {
                     if (status == BluetoothGatt.GATT_SUCCESS) {
                         Log.w(TAG, "onServicesDiscovered GATT_SUCCESS");
                         for (BluetoothGattService service : gatt.getServices()) {
-                            Log.w(TAG, "service: " + service.getUuid());
+                            Log.w(TAG, "Service: " + service.getUuid());
                             for (BluetoothGattCharacteristic characteristic : service.getCharacteristics()) {
-                                Log.w(TAG, "characteristic: " + characteristic.getUuid() + "  " + characteristic.getInstanceId());
+                                Log.w(TAG, "Characteristic: " + characteristic.getUuid() + "  " + characteristic.getInstanceId());
                                 if (characteristic.getValue() == null) {
-                                    //Log.w(TAG, "value is null");
+                                    Log.w(TAG, "value is null");
                                 } else {
                                     int format = -1;
                                     final int value = characteristic.getIntValue(format, 1);
@@ -264,6 +292,7 @@ public class MainActivity extends AppCompatActivity {
             };
 
     private void scanLeDevice(final boolean enable) {
+        Log.w(TAG, "scanLeDevice enable " + enable);
         if (enable) {
             // Stops scanning after a pre-defined scan period.
             mHandler.postDelayed(new Runnable() {
@@ -271,16 +300,21 @@ public class MainActivity extends AppCompatActivity {
                 public void run() {
                     if (mScanning) {
                         mScanning = false;
+                        Log.w(TAG, "scanLeDevice stopLeScan after " + SCAN_PERIOD + "ms");
                         mBluetoothAdapter.stopLeScan(mLeScanCallback);
                     }
+                    update();
                 }
             }, SCAN_PERIOD);
             mScanning = true;
+            Log.w(TAG, "scanLeDevice startLeScan");
             mBluetoothAdapter.startLeScan(mLeScanCallback);
         } else {
+            Log.w(TAG, "scanLeDevice stopLeScan");
             mScanning = false;
             mBluetoothAdapter.stopLeScan(mLeScanCallback);
         }
+        update();
     }
 }
 

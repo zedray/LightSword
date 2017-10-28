@@ -7,6 +7,12 @@
     tools:context="com.zedray.lightsword.MainActivity"
     tools:showIn="@layout/activity_main">
 
+    <TextView
+        android:id="@+id/textView_status"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center" />
+
     <View
         android:id="@+id/preview"
         android:layout_width="match_parent"
