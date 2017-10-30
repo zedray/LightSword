@@ -3,9 +3,11 @@
     <string name="title_activity_main">LightSword</string>
 
     <string name="checking_location_permission">Checking if Location permission is granted</string>
+    <string name="checking_record_audio_permission">Checking if Record Audio permission is granted</string>
     <string name="checking_location_setting">Checking if Location setting is enabled</string>
     <string name="error_location_setting_not_enabled">Sorry, location setting not enabled</string>
     <string name="error_location_permission_not_enabled">Sorry, location permission is not granted</string>
+    <string name="error_record_audio_permission_not_enabled">Sorry, Record Audio permission is not granted</string>
     <string name="error_location_other">Sorry, location setting error: </string>
     <string name="starting_bluetooth">Starting Bluetooth</string>
     <string name="error_bluetooth_not_enabled">Sorry, Bluetooth not enabled</string>
@@ -14,5 +16,6 @@
     <string name="red">%1$d Red</string>
     <string name="green">%1$d Green</string>
     <string name="blue">%1$d Blue</string>
-
+    <string name="play">Play</string>
+    <string name="stop">Stop</string>
 </resources>

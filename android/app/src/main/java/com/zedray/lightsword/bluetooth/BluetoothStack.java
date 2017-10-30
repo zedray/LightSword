@@ -30,6 +30,7 @@ public class BluetoothStack {
     private static final String SCRATCH = "a495ff21-c5b1-4b44-b512-1370f02d74de";
 
     private static final long SCAN_PERIOD = 10000;
+    //private static final long SCAN_PERIOD = 100;
     private static final int REQUEST_ENABLE_BT = 1;
 
     private BluetoothGatt mBluetoothGatt;

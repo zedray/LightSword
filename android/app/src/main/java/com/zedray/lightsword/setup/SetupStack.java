@@ -15,11 +15,13 @@ import com.zedray.lightsword.R;
 import com.zedray.lightsword.bluetooth.BluetoothStack;
 
 import static android.Manifest.permission.ACCESS_FINE_LOCATION;
+import static android.Manifest.permission_group.MICROPHONE;
 import static android.content.pm.PackageManager.PERMISSION_GRANTED;
 
 public class SetupStack {
 
     private static final int PERMISSION_REQUEST_COARSE_LOCATION = 846;
+    private static final int PERMISSION_REQUEST_RECORD_AUDIO = 953;
 
     private MainActivity mMainActivity;
 
@@ -30,20 +32,39 @@ public class SetupStack {
     public void checkLocationPermission() {
         mMainActivity.setStatus(mMainActivity.getString(R.string.checking_location_permission));
         if (ContextCompat.checkSelfPermission(mMainActivity, ACCESS_FINE_LOCATION) == PERMISSION_GRANTED) {
-            checkLocationSetting();
+            checkMicrophonePermission();
         } else {
             ActivityCompat.requestPermissions(mMainActivity, new String[]{ACCESS_FINE_LOCATION},
                     PERMISSION_REQUEST_COARSE_LOCATION);
         }
     }
 
+    public void checkMicrophonePermission() {
+        checkLocationSetting();
+        /*
+        mMainActivity.setStatus(mMainActivity.getString(R.string.checking_record_audio_permission));
+        if (ContextCompat.checkSelfPermission(mMainActivity, MICROPHONE) == PERMISSION_GRANTED) {
+            checkLocationSetting();
+        } else {
+            ActivityCompat.requestPermissions(mMainActivity, new String[]{MICROPHONE},
+                    PERMISSION_REQUEST_RECORD_AUDIO);
+        }*/
+    }
+
     public void onRequestPermissionsResult(int requestCode, @NonNull int[] grantResults) {
         switch (requestCode) {
             case PERMISSION_REQUEST_COARSE_LOCATION: {
                 if (grantResults[0] == PERMISSION_GRANTED) {
-                    checkLocationSetting();
+                    checkMicrophonePermission();
                 } else {
                     mMainActivity.setError(mMainActivity.getString(R.string.error_location_permission_not_enabled));
+                }
+            }
+            case PERMISSION_REQUEST_RECORD_AUDIO: {
+                if (grantResults[0] == PERMISSION_GRANTED) {
+                    checkLocationSetting();
+                } else {
+                    mMainActivity.setError(mMainActivity.getString(R.string.error_record_audio_permission_not_enabled));
                 }
             }
         }

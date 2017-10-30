@@ -2,7 +2,9 @@ package com.zedray.lightsword;
 
 import android.content.res.AssetFileDescriptor;
 import android.graphics.Color;
+import android.media.AudioManager;
 import android.media.MediaPlayer;
+import android.media.audiofx.Visualizer;
 import android.os.Bundle;
 import android.support.annotation.NonNull;
 import android.support.annotation.StringRes;
@@ -20,10 +22,12 @@ import com.zedray.lightsword.setup.SetupStack;
 public class MainActivity extends AppCompatActivity {
 
     private static final String TAG = "MainActivity";
-
+    Visualizer mVisualizer;
+    int[] mValues;
+    int[] mMin;
+    int[] mMax;
     private BluetoothStack mBluetoothStack;
     private SetupStack mSetupStack;
-
     private View mLoading;
     private ProgressBar mProgressBar;
     private TextView mStatusTextView;
@@ -34,9 +38,24 @@ public class MainActivity extends AppCompatActivity {
     private TextView mRedTextView;
     private TextView mGreenTextView;
     private TextView mBlueTextView;
-
     private Button mMediaButton;
     private MediaPlayer mMediaPlayer;
+    private SeekBar.OnSeekBarChangeListener mSeekBarChangeListener = new SeekBar.OnSeekBarChangeListener() {
+        @Override
+        public void onProgressChanged(final SeekBar seekBar, int progress, boolean fromUser) {
+            update();
+        }
+
+        @Override
+        public void onStartTrackingTouch(final SeekBar seekBar) {
+            // Do nothing.
+        }
+
+        @Override
+        public void onStopTrackingTouch(final SeekBar seekBar) {
+            // Do nothing.
+        }
+    };
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -150,21 +169,80 @@ public class MainActivity extends AppCompatActivity {
             if (mMediaPlayer != null && mMediaPlayer.isPlaying()) {
                 stopMedia();
             }
-            if (mMediaPlayer == null ) {
-                mMediaPlayer = new MediaPlayer();
+            setVolumeControlStream(AudioManager.STREAM_MUSIC);
+            if (mMediaPlayer == null) {
+                mMediaPlayer = MediaPlayer.create(this, R.raw.flash);
             }
 
-            AssetFileDescriptor descriptor = getAssets().openFd("flash.mp3");
-            mMediaPlayer.setDataSource(descriptor.getFileDescriptor(), descriptor.getStartOffset(), descriptor.getLength());
-            descriptor.close();
+            // Create the Visualizer object and attach it to our media player.
+            mVisualizer = new Visualizer(mMediaPlayer.getAudioSessionId());
+            int range = Visualizer.getCaptureSizeRange()[0]; // 0=128  1=1024
+            mVisualizer.setCaptureSize(range);
+            mMin = new int[3];
+            mMax = new int[3];
+            for (int i = 0; i < 2; i++) {
+                mMin[i] = Integer.MAX_VALUE;
+            }
 
-            mMediaPlayer.prepare();
-            mMediaPlayer.setVolume(1f, 1f);
-            mMediaPlayer.setLooping(false);
+            mVisualizer.setDataCaptureListener(
+                    new Visualizer.OnDataCaptureListener() {
+                        public void onWaveFormDataCapture(Visualizer visualizer,
+                                                          byte[] bytes, int samplingRate) {
+                            //mVisualizerView.updateVisualizer(bytes);
+                            useBytes(bytes);
+                        }
+
+                        public void onFftDataCapture(Visualizer visualizer,
+                                                     byte[] bytes, int samplingRate) {
+                            //useBytes(bytes);
+                        }
+                    }, Visualizer.getMaxCaptureRate(), true, false);
+
+            //mMediaPlayer.prepare();
+            //mMediaPlayer.setVolume(1f, 1f);
+            //mMediaPlayer.setLooping(false);
+            mMediaPlayer.setOnCompletionListener(new MediaPlayer.OnCompletionListener() {
+                public void onCompletion(MediaPlayer mediaPlayer) {
+                    mVisualizer.setEnabled(false);
+                }
+            });
+
+            mVisualizer.setEnabled(true);
             mMediaPlayer.start();
-            mMediaButton.setText("Stop");
+
+
+            mMediaButton.setText(R.string.stop);
         } catch (Exception e) {
             Log.e(TAG, "playMedia", e);
+        }
+    }
+
+    private void useBytes(byte[] bytes) {
+        if (bytes == null) {
+            return;
+        }
+        int[] rgbValues = new int[3];
+        rgbValues[0] = getAverage(bytes, 0, 60);
+        rgbValues[1] = getAverage(bytes, 30, 90);
+        rgbValues[2] = getAverage(bytes, 70, 128);
+        //Log.d(TAG, "values R" + rgbValues[0] + " G" + rgbValues[1]+ " B" + rgbValues[2]);
+        mRedSeekBar.setProgress(rgbValues[0]);
+        mGreenSeekBar.setProgress(rgbValues[1]);
+        mBlueSeekBar.setProgress(rgbValues[2]);
+    }
+
+    private int getAverage(byte[] bytes, int start, int end) {
+        int sum = 0;
+        for (int i = start; i < end; i++) {
+            sum = (bytes[i] & 0xFF);
+        }
+        int average = sum * 1000 / (end - start);
+        mMin[0] = Math.min(average, mMin[0]);
+        mMax[0] = Math.max(average, mMax[0]);
+        if (mMax[0] - mMin[0] > 0) {
+            return (average - mMin[0]) * 255 / (mMax[0] - mMin[0]);
+        } else {
+            return 0;
         }
     }
 
@@ -173,24 +251,11 @@ public class MainActivity extends AppCompatActivity {
             mMediaPlayer.stop();
             mMediaPlayer.release();
             mMediaPlayer = null;
-            mMediaButton.setText("Play");
+            mMediaButton.setText(R.string.play);
+        }
+        if (mVisualizer != null) {
+            mVisualizer.release();
+            mVisualizer = null;
         }
     }
-
-    private SeekBar.OnSeekBarChangeListener mSeekBarChangeListener = new SeekBar.OnSeekBarChangeListener() {
-        @Override
-        public void onProgressChanged(final SeekBar seekBar, int progress, boolean fromUser) {
-            update();
-        }
-
-        @Override
-        public void onStartTrackingTouch(final SeekBar seekBar) {
-            // Do nothing.
-        }
-
-        @Override
-        public void onStopTrackingTouch(final SeekBar seekBar) {
-            // Do nothing.
-        }
-    };
 }
