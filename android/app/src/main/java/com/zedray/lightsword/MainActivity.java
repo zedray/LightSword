@@ -1,11 +1,15 @@
 package com.zedray.lightsword;
 
+import android.content.res.AssetFileDescriptor;
 import android.graphics.Color;
+import android.media.MediaPlayer;
 import android.os.Bundle;
 import android.support.annotation.NonNull;
 import android.support.annotation.StringRes;
 import android.support.v7.app.AppCompatActivity;
+import android.util.Log;
 import android.view.View;
+import android.widget.Button;
 import android.widget.ProgressBar;
 import android.widget.SeekBar;
 import android.widget.TextView;
@@ -14,6 +18,8 @@ import com.zedray.lightsword.bluetooth.BluetoothStack;
 import com.zedray.lightsword.setup.SetupStack;
 
 public class MainActivity extends AppCompatActivity {
+
+    private static final String TAG = "MainActivity";
 
     private BluetoothStack mBluetoothStack;
     private SetupStack mSetupStack;
@@ -28,6 +34,9 @@ public class MainActivity extends AppCompatActivity {
     private TextView mRedTextView;
     private TextView mGreenTextView;
     private TextView mBlueTextView;
+
+    private Button mMediaButton;
+    private MediaPlayer mMediaPlayer;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -53,9 +62,24 @@ public class MainActivity extends AppCompatActivity {
         mRedTextView = (TextView) findViewById(R.id.textView_red);
         mGreenTextView = (TextView) findViewById(R.id.textView_green);
         mBlueTextView = (TextView) findViewById(R.id.textView_blue);
+
+        mMediaButton = (Button) findViewById(R.id.button_media);
+
         mRedSeekBar.setOnSeekBarChangeListener(mSeekBarChangeListener);
         mGreenSeekBar.setOnSeekBarChangeListener(mSeekBarChangeListener);
         mBlueSeekBar.setOnSeekBarChangeListener(mSeekBarChangeListener);
+
+        mMediaButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                if (mMediaPlayer != null && mMediaPlayer.isPlaying()) {
+                    stopMedia();
+                } else {
+                    playMedia();
+                }
+            }
+        });
+
         mSetupStack.checkLocationPermission();
     }
 
@@ -119,6 +143,38 @@ public class MainActivity extends AppCompatActivity {
     private void setTextString(@NonNull final TextView textView, @StringRes int labelRes,
                                final int value) {
         textView.setText(getString(labelRes, value));
+    }
+
+    private void playMedia() {
+        try {
+            if (mMediaPlayer != null && mMediaPlayer.isPlaying()) {
+                stopMedia();
+            }
+            if (mMediaPlayer == null ) {
+                mMediaPlayer = new MediaPlayer();
+            }
+
+            AssetFileDescriptor descriptor = getAssets().openFd("flash.mp3");
+            mMediaPlayer.setDataSource(descriptor.getFileDescriptor(), descriptor.getStartOffset(), descriptor.getLength());
+            descriptor.close();
+
+            mMediaPlayer.prepare();
+            mMediaPlayer.setVolume(1f, 1f);
+            mMediaPlayer.setLooping(false);
+            mMediaPlayer.start();
+            mMediaButton.setText("Stop");
+        } catch (Exception e) {
+            Log.e(TAG, "playMedia", e);
+        }
+    }
+
+    private void stopMedia() {
+        if (mMediaPlayer != null && mMediaPlayer.isPlaying()) {
+            mMediaPlayer.stop();
+            mMediaPlayer.release();
+            mMediaPlayer = null;
+            mMediaButton.setText("Play");
+        }
     }
 
     private SeekBar.OnSeekBarChangeListener mSeekBarChangeListener = new SeekBar.OnSeekBarChangeListener() {
