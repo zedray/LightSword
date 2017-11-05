@@ -14,18 +14,20 @@ import android.view.View;
 import android.widget.Button;
 import android.widget.ProgressBar;
 import android.widget.SeekBar;
+import android.widget.Spinner;
 import android.widget.TextView;
 
 import com.zedray.lightsword.bluetooth.BluetoothStack;
 import com.zedray.lightsword.setup.SetupStack;
+import com.zedray.lightsword.visualizer.BarGraphVisualizerView;
+import com.zedray.lightsword.visualizer.VisualizerView;
 
 public class MainActivity extends AppCompatActivity {
 
     private static final String TAG = "MainActivity";
-    Visualizer mVisualizer;
-    int[] mValues;
-    int[] mMin;
-    int[] mMax;
+    private Visualizer mVisualizer;
+    private int[] mMin;
+    private int[] mMax;
     private BluetoothStack mBluetoothStack;
     private SetupStack mSetupStack;
     private View mLoading;
@@ -39,7 +41,12 @@ public class MainActivity extends AppCompatActivity {
     private TextView mGreenTextView;
     private TextView mBlueTextView;
     private Button mMediaButton;
+    private Button mTestModeButton;
     private MediaPlayer mMediaPlayer;
+    private VisualizerView mVisualizerView;
+    private Spinner mSpinner;
+    private BarGraphVisualizerView mBarGraphVisualizerView;
+
     private SeekBar.OnSeekBarChangeListener mSeekBarChangeListener = new SeekBar.OnSeekBarChangeListener() {
         @Override
         public void onProgressChanged(final SeekBar seekBar, int progress, boolean fromUser) {
@@ -83,6 +90,13 @@ public class MainActivity extends AppCompatActivity {
         mBlueTextView = (TextView) findViewById(R.id.textView_blue);
 
         mMediaButton = (Button) findViewById(R.id.button_media);
+        mTestModeButton = (Button) findViewById(R.id.button_test_mode);
+
+        mVisualizerView = (VisualizerView) findViewById(R.id.visualizerView);
+        mBarGraphVisualizerView = (BarGraphVisualizerView) findViewById(R.id.barGraphVisualizerView);
+        mBarGraphVisualizerView.setActivity(this);
+
+        mSpinner = (Spinner) findViewById(R.id.spinner);
 
         mRedSeekBar.setOnSeekBarChangeListener(mSeekBarChangeListener);
         mGreenSeekBar.setOnSeekBarChangeListener(mSeekBarChangeListener);
@@ -98,7 +112,12 @@ public class MainActivity extends AppCompatActivity {
                 }
             }
         });
-
+        mTestModeButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                hideStatus();
+            }
+        });
         mSetupStack.checkLocationPermission();
     }
 
@@ -171,7 +190,7 @@ public class MainActivity extends AppCompatActivity {
             }
             setVolumeControlStream(AudioManager.STREAM_MUSIC);
             if (mMediaPlayer == null) {
-                mMediaPlayer = MediaPlayer.create(this, R.raw.flash);
+                mMediaPlayer = MediaPlayer.create(this, getMediaToPlay());
             }
 
             // Create the Visualizer object and attach it to our media player.
@@ -188,22 +207,24 @@ public class MainActivity extends AppCompatActivity {
                     new Visualizer.OnDataCaptureListener() {
                         public void onWaveFormDataCapture(Visualizer visualizer,
                                                           byte[] bytes, int samplingRate) {
-                            //mVisualizerView.updateVisualizer(bytes);
-                            useBytes(bytes);
+                            mVisualizerView.updateVisualizer(bytes);
+                            //useBytes(bytes);
                         }
 
                         public void onFftDataCapture(Visualizer visualizer,
                                                      byte[] bytes, int samplingRate) {
+
+                            mBarGraphVisualizerView.updateVisualizer(bytes);
                             //useBytes(bytes);
                         }
-                    }, Visualizer.getMaxCaptureRate(), true, false);
+                    }, Visualizer.getMaxCaptureRate(), true, true);
 
             //mMediaPlayer.prepare();
             //mMediaPlayer.setVolume(1f, 1f);
             //mMediaPlayer.setLooping(false);
             mMediaPlayer.setOnCompletionListener(new MediaPlayer.OnCompletionListener() {
                 public void onCompletion(MediaPlayer mediaPlayer) {
-                    mVisualizer.setEnabled(false);
+                    stopMedia();
                 }
             });
 
@@ -217,6 +238,27 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
+    private int getMediaToPlay() {
+        switch (mSpinner.getSelectedItemPosition()) {
+            case 0:
+                return R.raw.flash;
+            case 1:
+                return R.raw.laser_blasts;
+            case 2:
+                return R.raw.lightsaber_turn_on;
+            case 3:
+                return R.raw.r2d2;
+            case 4:
+                return R.raw.robot_computing;
+            case 5:
+                return R.raw.sonar_ping;
+            case 6:
+                return R.raw.thunder_clap;
+            default:
+                return R.raw.flash;
+        }
+    }
+
     private void useBytes(byte[] bytes) {
         if (bytes == null) {
             return;
@@ -225,10 +267,13 @@ public class MainActivity extends AppCompatActivity {
         rgbValues[0] = getAverage(bytes, 0, 60);
         rgbValues[1] = getAverage(bytes, 30, 90);
         rgbValues[2] = getAverage(bytes, 70, 128);
-        //Log.d(TAG, "values R" + rgbValues[0] + " G" + rgbValues[1]+ " B" + rgbValues[2]);
-        mRedSeekBar.setProgress(rgbValues[0]);
-        mGreenSeekBar.setProgress(rgbValues[1]);
-        mBlueSeekBar.setProgress(rgbValues[2]);
+        setValues(rgbValues[0], rgbValues[1], rgbValues[2]);
+    }
+
+    public void setValues(int red, int green, int blue) {
+        mRedSeekBar.setProgress(red);
+        mGreenSeekBar.setProgress(green);
+        mBlueSeekBar.setProgress(blue);
     }
 
     private int getAverage(byte[] bytes, int start, int end) {
@@ -250,12 +295,13 @@ public class MainActivity extends AppCompatActivity {
         if (mMediaPlayer != null && mMediaPlayer.isPlaying()) {
             mMediaPlayer.stop();
             mMediaPlayer.release();
-            mMediaPlayer = null;
-            mMediaButton.setText(R.string.play);
         }
         if (mVisualizer != null) {
+            mVisualizer.setEnabled(false);
             mVisualizer.release();
-            mVisualizer = null;
         }
+        mMediaButton.setText(R.string.play);
+        mMediaPlayer = null;
+        mVisualizer = null;
     }
 }

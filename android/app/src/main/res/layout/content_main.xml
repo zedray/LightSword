@@ -3,6 +3,7 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:keepScreenOn="true"
     android:orientation="vertical"
     tools:context="com.zedray.lightsword.MainActivity"
     tools:showIn="@layout/activity_main">
@@ -12,10 +13,28 @@
         android:layout_height="match_parent"
         android:orientation="vertical">
 
+        <Spinner
+            android:id="@+id/spinner"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:entries="@array/audio_options"
+            android:prompt="@string/audio_prompt"
+            />
+
+        <com.zedray.lightsword.visualizer.VisualizerView
+            android:id="@+id/visualizerView"
+            android:layout_width="match_parent"
+            android:layout_height="100dp" />
+
+        <com.zedray.lightsword.visualizer.BarGraphVisualizerView
+            android:id="@+id/barGraphVisualizerView"
+            android:layout_width="match_parent"
+            android:layout_height="100dp" />
+
         <View
             android:id="@+id/preview"
             android:layout_width="match_parent"
-            android:layout_height="200dp"
+            android:layout_height="50dp"
             android:background="@color/colorAccent" />
 
         <TextView
@@ -92,6 +111,13 @@
         android:background="@color/common_google_signin_btn_text_dark_default"
         android:orientation="vertical"
         android:visibility="gone">
+
+        <Button
+            android:id="@+id/button_test_mode"
+            style="@style/Base.TextAppearance.AppCompat.Large"
+            android:layout_width="wrap_content"
+            android:layout_height="100dp"
+            android:text="@string/test_mode" />
 
         <ProgressBar
             android:id="@+id/progressBar"

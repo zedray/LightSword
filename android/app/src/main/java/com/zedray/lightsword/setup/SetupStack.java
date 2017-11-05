@@ -1,5 +1,6 @@
 package com.zedray.lightsword.setup;
 
+import android.Manifest;
 import android.support.annotation.NonNull;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
@@ -15,6 +16,7 @@ import com.zedray.lightsword.R;
 import com.zedray.lightsword.bluetooth.BluetoothStack;
 
 import static android.Manifest.permission.ACCESS_FINE_LOCATION;
+import static android.Manifest.permission.RECORD_AUDIO;
 import static android.Manifest.permission_group.MICROPHONE;
 import static android.content.pm.PackageManager.PERMISSION_GRANTED;
 
@@ -41,14 +43,14 @@ public class SetupStack {
 
     public void checkMicrophonePermission() {
         checkLocationSetting();
-        /*
+
         mMainActivity.setStatus(mMainActivity.getString(R.string.checking_record_audio_permission));
-        if (ContextCompat.checkSelfPermission(mMainActivity, MICROPHONE) == PERMISSION_GRANTED) {
+        if (ContextCompat.checkSelfPermission(mMainActivity, RECORD_AUDIO) == PERMISSION_GRANTED) {
             checkLocationSetting();
         } else {
-            ActivityCompat.requestPermissions(mMainActivity, new String[]{MICROPHONE},
+            ActivityCompat.requestPermissions(mMainActivity, new String[]{RECORD_AUDIO},
                     PERMISSION_REQUEST_RECORD_AUDIO);
-        }*/
+        }
     }
 
     public void onRequestPermissionsResult(int requestCode, @NonNull int[] grantResults) {
